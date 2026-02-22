@@ -11,7 +11,7 @@ This is the central tracking document for project progress.
 ### Phase 1: Planning [IN PROGRESS]
 - [x] Brainstorming Session
 - [x] Product Requirement Document (PRD)
-- [ ] Architecture Design
+- [x] Architecture Design
 - [ ] Epic & Story Breakdown
 
 ### Phase 2: Implementation [TODO]
@@ -21,5 +21,5 @@ This is the central tracking document for project progress.
 - [ ] World Themes
 
 ## 📝 Recent Updates
+- **2026-02-22:** Documented Technical Architecture (`bmad-architecture.md`).
 - **2026-02-22:** Generated Comprehensive PRD.
-- **2026-02-22:** Initialized Master Workflow tracker.
