@@ -8,11 +8,11 @@ This is the central tracking document for project progress.
 
 ## 🛤️ Active Milestones
 
-### Phase 1: Planning [IN PROGRESS]
+### Phase 1: Planning [COMPLETE]
 - [x] Brainstorming Session
 - [x] Product Requirement Document (PRD)
 - [x] Architecture Design
-- [ ] Epic & Story Breakdown
+- [x] Epic & Story Breakdown
 
 ### Phase 2: Implementation [TODO]
 - [ ] Core Engine Setup
@@ -21,5 +21,6 @@ This is the central tracking document for project progress.
 - [ ] World Themes
 
 ## 📝 Recent Updates
+- **2026-02-22:** Defined Epics & User Stories (`bmad-stories.md`) and set DoD.
 - **2026-02-22:** Documented Technical Architecture (`bmad-architecture.md`).
 - **2026-02-22:** Generated Comprehensive PRD.
