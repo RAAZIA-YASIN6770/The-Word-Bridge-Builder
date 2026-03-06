@@ -3,24 +3,19 @@
  * Story 2 — Letter Interaction (The Physics Flick)
  *
  * Renders a tray of draggable / flickable letter orbs.
- * Uses Matter.js for physics simulation:
- *   - Drag: pointer down → update body position each frame
- *   - Flick: capture velocity on pointer-up → apply to physics body
- *   - Snap: each tick checks if a body is within snap-radius of a bridge slot center
- *
- * The physics canvas is hidden; DOM orb elements mirror body positions.
- * When a body enters a slot's snap zone, it snaps (removes from physics),
- * and calls bridgeRef.fillSlot().
+ * Drag: pointer-down → orb becomes position:fixed and follows cursor
+ * Flick: on pointer-up, velocity is calculated → orb animates in that direction
+ * Snap: if orb lands near a bridge slot, it snaps into place
  */
 
 import React, {
     useEffect,
     useRef,
     useCallback,
+    useState,
     forwardRef,
     useImperativeHandle,
 } from 'react';
-import Matter from 'matter-js';
 import { gsap } from 'gsap';
 import { BridgeComponentHandle } from './BridgeComponent';
 
@@ -31,60 +26,38 @@ export interface OrbDef {
     letter: string;
 }
 
-interface OrbState {
-    def: OrbDef;
-    body: Matter.Body;
-    el: HTMLDivElement | null;
-    used: boolean;
-    /** velocity sampled two frames before pointer-up for flick */
-    velHistory: { x: number; y: number }[];
-}
-
 interface SlotTarget {
     index: number;
-    /** absolute page coordinates of slot centre */
     cx: number;
     cy: number;
-    /** slot element for getBoundingClientRect re-measurement */
     el: HTMLElement;
     filled: boolean;
 }
 
 export interface LetterOrbHandle {
-    /** Reset all orbs back to tray (skeleton restart) */
     reset: () => void;
 }
 
 interface LetterOrbProps {
     orbs: OrbDef[];
     bridgeRef: React.RefObject<BridgeComponentHandle | null>;
-    /** Called when a letter snaps into a slot */
     onSnap?: (orbId: string, slotIndex: number) => void;
-    /** Whether interaction is locked (e.g. during result animation) */
     locked?: boolean;
 }
 
 // ──── Constants ────────────────────────────────────────────────────────────
 
-const SNAP_RADIUS = 54;   // px — distance for auto-snap
-const ORB_RADIUS = 29;   // px — physics body radius
-const GRAVITY_Y = 0.8;
-const FLICK_SCALE = 0.018; // scales pixel-velocity to Matter units
-const VEL_HISTORY_LEN = 4;
+const SNAP_RADIUS = 65;  // px — how close orb needs to be to auto-snap
+const VEL_SAMPLES = 5;   // number of pointer-move samples for flick velocity
 
 // ──── Helpers ──────────────────────────────────────────────────────────────
 
-/** Get absolute centre of a DOM element */
 function getCenter(el: HTMLElement): { cx: number; cy: number } {
     const r = el.getBoundingClientRect();
     return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
 }
 
-/** Find the nearest unfilled slot within snap radius */
-function nearestSlot(
-    px: number, py: number,
-    slots: SlotTarget[]
-): SlotTarget | null {
+function findNearestSlot(px: number, py: number, slots: SlotTarget[]): SlotTarget | null {
     let best: SlotTarget | null = null;
     let bestDist = Infinity;
     for (const s of slots) {
@@ -105,63 +78,32 @@ function nearestSlot(
 const LetterOrb = forwardRef<LetterOrbHandle, LetterOrbProps>(
     ({ orbs, bridgeRef, onSnap, locked = false }, ref) => {
 
-        const trayRef = useRef<HTMLDivElement>(null);
-        const canvasRef = useRef<HTMLCanvasElement>(null);
-        const engineRef = useRef<Matter.Engine | null>(null);
-        const runnerRef = useRef<Matter.Runner | null>(null);
-        const orbsRef = useRef<OrbState[]>([]);
+        const [usedOrbs, setUsedOrbs] = useState<Set<string>>(new Set());
         const slotTargets = useRef<SlotTarget[]>([]);
-        const dragState = useRef<{
-            orbState: OrbState;
-            startPx: number; startPy: number;
-            lastPx: number; lastPy: number;
-        } | null>(null);
-        const tickRafRef = useRef<number>(0);
         const lockedRef = useRef(locked);
+        const dragRef = useRef<{
+            orbId: string;
+            el: HTMLDivElement;
+            startRect: DOMRect;
+            // For flick velocity
+            history: { x: number; y: number; t: number }[];
+        } | null>(null);
 
         useEffect(() => { lockedRef.current = locked; }, [locked]);
 
-        // ── Expose imperative handle ──────────────────────────────────────────
+        // ── Expose imperative handle ──
         useImperativeHandle(ref, () => ({
             reset() {
-                // Restore all orbs to tray positions, mark unused
-                orbsRef.current.forEach(os => {
-                    os.used = false;
-                    os.velHistory = [];
-                    if (os.el) {
-                        os.el.classList.remove('letter-orb--used');
-                        gsap.set(os.el, { clearProps: 'all', opacity: 1, scale: 1 });
-                    }
-                    // Reset body to tray position
-                    const trayPos = getTrayPosition(os.def.id);
-                    if (trayPos) {
-                        Matter.Body.setPosition(os.body, trayPos);
-                        Matter.Body.setVelocity(os.body, { x: 0, y: 0 });
-                        Matter.Body.setStatic(os.body, true);
-                    }
-                });
+                setUsedOrbs(new Set());
                 slotTargets.current.forEach(s => { s.filled = false; });
+                // Re-measure slots after bridge resets
+                setTimeout(measureSlots, 150);
             },
         }));
 
-        // ── Utility: figure out a body's tray resting position ──────────────
-        function getTrayPosition(orbId: string): { x: number; y: number } | null {
-            const tray = trayRef.current;
-            if (!tray) return null;
-            const trayR = tray.getBoundingClientRect();
-            const idx = orbs.findIndex(o => o.id === orbId);
-            if (idx < 0) return null;
-            // Space orbs evenly within the tray
-            const spacing = Math.min(80, (trayR.width - 32) / orbs.length);
-            const startX = trayR.left + 24 + idx * spacing + spacing / 2;
-            const centreY = trayR.top + trayR.height / 2;
-            return { x: startX, y: centreY };
-        }
-
-        // ── Measure slot targets (bridge DOM slots) ───────────────────────────
+        // ── Measure bridge slot positions ──
         function measureSlots() {
             slotTargets.current = [];
-            // Find all bridge slot elements
             const slotEls = document.querySelectorAll<HTMLElement>('[id^="bridge-slot-"]');
             slotEls.forEach(el => {
                 const idxStr = el.getAttribute('data-slot-index');
@@ -175,264 +117,230 @@ const LetterOrb = forwardRef<LetterOrbHandle, LetterOrbProps>(
             });
         }
 
-        // ── Build Matter.js world ─────────────────────────────────────────────
+        // Measure slots on mount and when orbs change
         useEffect(() => {
-            const canvas = canvasRef.current;
-            const tray = trayRef.current;
-            if (!canvas || !tray) return;
-
-            // Resize canvas to full viewport
-            const W = window.innerWidth;
-            const H = window.innerHeight;
-            canvas.width = W;
-            canvas.height = H;
-
-            // Engine
-            const engine = Matter.Engine.create({ gravity: { x: 0, y: GRAVITY_Y } });
-            engineRef.current = engine;
-
-            // Ground & walls (invisible)
-            const ground = Matter.Bodies.rectangle(W / 2, H + 30, W * 2, 60, { isStatic: true, label: 'ground' });
-            const wallL = Matter.Bodies.rectangle(-30, H / 2, 60, H * 2, { isStatic: true, label: 'wallL' });
-            const wallR = Matter.Bodies.rectangle(W + 30, H / 2, 60, H * 2, { isStatic: true, label: 'wallR' });
-            Matter.World.add(engine.world, [ground, wallL, wallR]);
-
-            // Create a body per orb, placed statically in tray initially
-            const trayR = tray.getBoundingClientRect();
-            const spacing = Math.min(80, (trayR.width - 32) / orbs.length);
-            const startX = trayR.left + 24;
-            const centreY = trayR.top + trayR.height / 2;
-
-            const states: OrbState[] = orbs.map((def, i) => {
-                const x = startX + i * spacing + spacing / 2;
-                const body = Matter.Bodies.circle(x, centreY, ORB_RADIUS, {
-                    restitution: 0.55,
-                    friction: 0.1,
-                    frictionAir: 0.06,
-                    isStatic: true,       // start static; released on drag
-                    label: `orb-${def.id}`,
-                });
-                Matter.World.add(engine.world, body);
-                return { def, body, el: null, used: false, velHistory: [] };
-            });
-            orbsRef.current = states;
-
-            // Runner (stepped manually via RAF for control)
-            const runner = Matter.Runner.create();
-            runnerRef.current = runner;
-
-            // Measure slots after a short delay (bridge renders first)
-            setTimeout(measureSlots, 300);
-
-            // ── Tick loop: sync DOM to physics bodies ──────────────────────────
-            function tick() {
-                Matter.Runner.tick(runner, engine, 1000 / 60);
-
-                orbsRef.current.forEach(os => {
-                    if (os.used || !os.el) return;
-                    const { x, y } = os.body.position;
-                    os.el.style.left = `${x - ORB_RADIUS}px`;
-                    os.el.style.top = `${y - ORB_RADIUS}px`;
-
-                    // Snap check (only for non-static, moving orbs)
-                    if (!os.body.isStatic) {
-                        const snap = nearestSlot(x, y, slotTargets.current);
-                        if (snap) {
-                            snapOrbToSlot(os, snap);
-                        }
-                    }
-                });
-
-                tickRafRef.current = requestAnimationFrame(tick);
-            }
-            tickRafRef.current = requestAnimationFrame(tick);
-
-            // ── Resize handler ────────────────────────────────────────────────
-            function handleResize() {
-                const c = canvasRef.current;
-                if (c) {
-                    c.width = window.innerWidth;
-                    c.height = window.innerHeight;
-                }
-                measureSlots();
-            }
-            window.addEventListener('resize', handleResize);
-
+            const timer = setTimeout(measureSlots, 400);
+            window.addEventListener('resize', measureSlots);
             return () => {
-                cancelAnimationFrame(tickRafRef.current);
-                Matter.Engine.clear(engine);
-                Matter.World.clear(engine.world, false);
-                window.removeEventListener('resize', handleResize);
+                clearTimeout(timer);
+                window.removeEventListener('resize', measureSlots);
             };
         }, [orbs]);
 
-        // ── Snap orb into slot ───────────────────────────────────────────────
-        const snapOrbToSlot = useCallback((os: OrbState, slot: SlotTarget) => {
-            if (os.used || slot.filled) return;
-
-            // Mark as used / slot filled
-            os.used = true;
+        // ── SNAP into a bridge slot ──
+        const snapOrbToSlot = useCallback((orbId: string, letter: string, el: HTMLDivElement, slot: SlotTarget) => {
             slot.filled = true;
+            setUsedOrbs(prev => new Set(prev).add(orbId));
 
-            // Make body static at slot position
-            Matter.Body.setStatic(os.body, true);
-            Matter.Body.setPosition(os.body, { x: slot.cx, y: slot.cy });
-            Matter.Body.setVelocity(os.body, { x: 0, y: 0 });
+            // Animate orb flying to slot center then disappearing
+            const { cx, cy } = getCenter(slot.el);
+            gsap.to(el, {
+                left: cx - 29,
+                top: cy - 29,
+                scale: 0.6,
+                opacity: 0,
+                duration: 0.3,
+                ease: 'power3.in',
+                onComplete: () => {
+                    // Reset the orb element styles so it goes back to normal flow (hidden)
+                    el.style.position = '';
+                    el.style.left = '';
+                    el.style.top = '';
+                    el.style.zIndex = '';
+                    gsap.set(el, { clearProps: 'all' });
+                },
+            });
 
-            // Fly orb DOM element to slot centre with GSAP
-            if (os.el) {
-                // Re-measure slot (layout may have shifted)
-                const { cx, cy } = getCenter(slot.el);
-                const r = os.el.getBoundingClientRect();
-
-                gsap.to(os.el, {
-                    x: cx - (r.left + ORB_RADIUS),
-                    y: cy - (r.top + ORB_RADIUS),
-                    scale: 0.75,
-                    opacity: 0,
-                    duration: 0.35,
-                    ease: 'power3.in',
-                    onComplete: () => {
-                        if (os.el) {
-                            os.el.classList.add('letter-orb--used');
-                            gsap.set(os.el, { clearProps: 'all' });
-                        }
-                    },
-                });
-            }
-
-            // Notify bridge
-            bridgeRef.current?.fillSlot(slot.index, os.def.letter);
-            onSnap?.(os.def.id, slot.index);
+            // Notify bridge component to fill the slot
+            bridgeRef.current?.fillSlot(slot.index, letter);
+            onSnap?.(orbId, slot.index);
         }, [bridgeRef, onSnap]);
 
-        // ── Pointer Events (Drag + Flick) ────────────────────────────────────
+        // ── Return orb to tray (no snap found) ──
+        const returnToTray = useCallback((el: HTMLDivElement, startRect: DOMRect) => {
+            gsap.to(el, {
+                left: startRect.left,
+                top: startRect.top,
+                scale: 1,
+                duration: 0.4,
+                ease: 'elastic.out(1, 0.6)',
+                onComplete: () => {
+                    el.style.position = '';
+                    el.style.left = '';
+                    el.style.top = '';
+                    el.style.zIndex = '';
+                    gsap.set(el, { clearProps: 'all' });
+                },
+            });
+        }, []);
 
-        const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, os: OrbState) => {
-            if (lockedRef.current || os.used) return;
-            e.currentTarget.setPointerCapture(e.pointerId);
+        // ── Pointer handlers ──
 
-            // make body dynamic
-            Matter.Body.setStatic(os.body, false);
+        const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, def: OrbDef) => {
+            if (lockedRef.current || usedOrbs.has(def.id)) return;
 
-            dragState.current = {
-                orbState: os,
-                startPx: e.clientX,
-                startPy: e.clientY,
-                lastPx: e.clientX,
-                lastPy: e.clientY,
+            const el = e.currentTarget;
+            el.setPointerCapture(e.pointerId);
+
+            // Save original position in the tray flow
+            const startRect = el.getBoundingClientRect();
+
+            // Pull the orb out of flex flow → position: fixed at current spot
+            el.style.position = 'fixed';
+            el.style.left = `${startRect.left}px`;
+            el.style.top = `${startRect.top}px`;
+            el.style.width = `${startRect.width}px`;
+            el.style.height = `${startRect.height}px`;
+            el.style.zIndex = '999';
+            el.style.margin = '0';
+
+            // Scale up for "picked up" feel
+            gsap.to(el, { scale: 1.2, duration: 0.12, ease: 'power2.out' });
+
+            dragRef.current = {
+                orbId: def.id,
+                el,
+                startRect,
+                history: [{ x: e.clientX, y: e.clientY, t: Date.now() }],
             };
-            os.velHistory = [];
 
-            // Bring orb to front visually
-            if (os.el) {
-                os.el.style.zIndex = '200';
-                gsap.to(os.el, { scale: 1.15, duration: 0.12, ease: 'power2.out' });
+            // Re-measure slots (they may have shifted)
+            measureSlots();
+        }, [usedOrbs]);
+
+        const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+            const drag = dragRef.current;
+            if (!drag) return;
+
+            const el = drag.el;
+            const elW = drag.startRect.width;
+            const elH = drag.startRect.height;
+
+            // Center orb on cursor
+            el.style.left = `${e.clientX - elW / 2}px`;
+            el.style.top = `${e.clientY - elH / 2}px`;
+
+            // Record for velocity
+            drag.history.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+            if (drag.history.length > VEL_SAMPLES) {
+                drag.history.shift();
             }
         }, []);
 
-        const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-            const ds = dragState.current;
-            if (!ds) return;
+        const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+            const drag = dragRef.current;
+            if (!drag) return;
+            dragRef.current = null;
 
-            const { orbState } = ds;
-            const dx = e.clientX - ds.lastPx;
-            const dy = e.clientY - ds.lastPy;
+            const el = drag.el;
+            const elW = drag.startRect.width;
+            const elH = drag.startRect.height;
+            const orbCx = e.clientX;
+            const orbCy = e.clientY;
 
-            // Record velocity history for flick
-            orbState.velHistory.push({ x: dx, y: dy });
-            if (orbState.velHistory.length > VEL_HISTORY_LEN) {
-                orbState.velHistory.shift();
-            }
-
-            // Move physics body to cursor
-            const { x, y } = orbState.body.position;
-            Matter.Body.setPosition(orbState.body, { x: x + dx, y: y + dy });
-            Matter.Body.setVelocity(orbState.body, { x: dx * 2, y: dy * 2 });
-
-            ds.lastPx = e.clientX;
-            ds.lastPy = e.clientY;
-        }, []);
-
-        const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-            const ds = dragState.current;
-            if (!ds) return;
-
-            const { orbState } = ds;
-            orbState.velHistory;
-
-            // Compute average flick velocity
-            if (orbState.velHistory.length > 0) {
-                const avg = orbState.velHistory.reduce(
-                    (acc, v) => ({ x: acc.x + v.x, y: acc.y + v.y }),
-                    { x: 0, y: 0 }
-                );
-                avg.x /= orbState.velHistory.length;
-                avg.y /= orbState.velHistory.length;
-
-                // Only apply flick if meaningful velocity
-                const speed = Math.sqrt(avg.x ** 2 + avg.y ** 2);
-                if (speed > 2) {
-                    Matter.Body.setVelocity(orbState.body, {
-                        x: avg.x * FLICK_SCALE * 60,
-                        y: avg.y * FLICK_SCALE * 60,
-                    });
+            // Check for snap immediately at drop position
+            const slot = findNearestSlot(orbCx, orbCy, slotTargets.current);
+            if (slot) {
+                const orbDef = orbs.find(o => o.id === drag.orbId);
+                if (orbDef) {
+                    snapOrbToSlot(drag.orbId, orbDef.letter, el, slot);
+                    return;
                 }
             }
 
-            // Scale back orb
-            if (orbState.el) {
-                orbState.el.style.zIndex = '';
-                gsap.to(orbState.el, { scale: 1, duration: 0.2, ease: 'power2.out' });
+            // Calculate flick velocity from pointer history
+            const h = drag.history;
+            if (h.length >= 2) {
+                const first = h[0];
+                const last = h[h.length - 1];
+                const dt = Math.max(last.t - first.t, 1); // ms
+                const vx = (last.x - first.x) / dt * 16; // px per frame (~16ms)
+                const vy = (last.y - first.y) / dt * 16;
+                const speed = Math.sqrt(vx * vx + vy * vy);
+
+                if (speed > 3) {
+                    // Flick! Animate orb in the flick direction, then check for snap
+                    const flickDuration = Math.min(0.5, speed * 0.015);
+                    const targetX = orbCx + vx * 15;
+                    const targetY = orbCy + vy * 15;
+
+                    gsap.to(el, {
+                        left: targetX - elW / 2,
+                        top: targetY - elH / 2,
+                        duration: flickDuration,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            // Check snap at landing position
+                            const landRect = el.getBoundingClientRect();
+                            const landCx = landRect.left + landRect.width / 2;
+                            const landCy = landRect.top + landRect.height / 2;
+                            const landSlot = findNearestSlot(landCx, landCy, slotTargets.current);
+
+                            if (landSlot) {
+                                const orbDef = orbs.find(o => o.id === drag.orbId);
+                                if (orbDef) {
+                                    snapOrbToSlot(drag.orbId, orbDef.letter, el, landSlot);
+                                    return;
+                                }
+                            }
+                            // No snap → return to tray
+                            returnToTray(el, drag.startRect);
+                        },
+                    });
+                    return;
+                }
             }
 
-            dragState.current = null;
-        }, []);
+            // No flick, no snap → return to tray
+            gsap.to(el, { scale: 1, duration: 0.15, ease: 'power2.out' });
+            returnToTray(el, drag.startRect);
+        }, [orbs, snapOrbToSlot, returnToTray]);
 
-        // ── Assign el refs dynamically ────────────────────────────────────────
-        const setOrbEl = useCallback((el: HTMLDivElement | null, index: number) => {
-            if (orbsRef.current[index]) {
-                orbsRef.current[index].el = el;
+        // ── Keyboard: press Enter/Space to auto-snap to next slot ──
+        const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, def: OrbDef) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !lockedRef.current && !usedOrbs.has(def.id)) {
+                e.preventDefault();
+                const nextFree = slotTargets.current.find(s => !s.filled);
+                const el = e.currentTarget;
+                if (nextFree) {
+                    // Quick animate to slot
+                    const startRect = el.getBoundingClientRect();
+                    el.style.position = 'fixed';
+                    el.style.left = `${startRect.left}px`;
+                    el.style.top = `${startRect.top}px`;
+                    el.style.width = `${startRect.width}px`;
+                    el.style.height = `${startRect.height}px`;
+                    el.style.zIndex = '999';
+                    el.style.margin = '0';
+                    snapOrbToSlot(def.id, def.letter, el, nextFree);
+                }
             }
-        }, []);
+        }, [usedOrbs, snapOrbToSlot]);
 
-        // ── Render ────────────────────────────────────────────────────────────
+        // ── Render ──
         return (
             <div className="orbs-area" id="orbs-area">
-                {/* Hidden physics canvas (matter-js renders to it but we keep it opacity:0) */}
-                <canvas ref={canvasRef} className="physics-canvas" aria-hidden="true" />
-
-                {/* Letter Orb Tray */}
                 <div
-                    ref={trayRef}
                     className="orbs-tray"
                     id="orbs-tray"
                     role="group"
                     aria-label="Letter orbs — drag or flick into the bridge slots"
                 >
-                    {orbs.map((def, i) => {
-                        const os = orbsRef.current[i];
+                    {orbs.map(def => {
+                        const isUsed = usedOrbs.has(def.id);
                         return (
                             <div
                                 key={def.id}
                                 id={`orb-${def.id}`}
-                                ref={el => setOrbEl(el, i)}
-                                className="letter-orb"
-                                style={{ position: 'relative' }} // overridden by tick loop when dragging
+                                className={`letter-orb${isUsed ? ' letter-orb--used' : ''}`}
                                 role="button"
                                 aria-label={`Letter ${def.letter}`}
-                                tabIndex={0}
-                                onPointerDown={e => os && onPointerDown(e, os)}
-                                onPointerMove={e => dragState.current?.orbState === os ? onPointerMove(e) : undefined}
-                                onPointerUp={e => dragState.current?.orbState === os ? onPointerUp(e) : undefined}
-                                // Keyboard accessibility: tap Enter/Space to auto-snap to next free slot
-                                onKeyDown={e => {
-                                    if ((e.key === 'Enter' || e.key === ' ') && os && !os.used && !lockedRef.current) {
-                                        e.preventDefault();
-                                        const nextFree = slotTargets.current.find(s => !s.filled);
-                                        if (nextFree) snapOrbToSlot(os, nextFree);
-                                    }
-                                }}
+                                tabIndex={isUsed ? -1 : 0}
+                                onPointerDown={e => handlePointerDown(e, def)}
+                                onPointerMove={handlePointerMove}
+                                onPointerUp={handlePointerUp}
+                                onKeyDown={e => handleKeyDown(e, def)}
+                                style={{ touchAction: 'none' }}
                             >
                                 <span className="letter-orb__text" aria-hidden="true">{def.letter}</span>
                             </div>
