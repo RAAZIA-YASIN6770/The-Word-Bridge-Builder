@@ -108,13 +108,21 @@ body {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: var(--clr-bg-sky);
+  background: var(--world-sky, var(--clr-bg-sky));
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  transition: background 1.2s ease;
 }
+
+/* ── World Themes ── */
+.world--forest  { --world-accent: #48bb78; }
+.world--mountain{ --world-accent: #63b3ed; }
+.world--cave    { --world-accent: #b794f4; }
+.world--reef    { --world-accent: #4fd1c5; }
+.world--sky     { --world-accent: #f6ad55; }
 
 /* ── Sky / Environment Layers ── */
 .env-stars {
@@ -213,30 +221,91 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--sp-md);
+}
+
+.hud__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
 .hud__title {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.0rem;
   letter-spacing: 0.12em;
   color: rgba(255, 220, 120, 0.85);
   text-shadow: 0 0 12px rgba(255, 200, 60, 0.5);
 }
 
+.hud__world-name {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--world-accent, var(--clr-success));
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
 .hud__word-label {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.50);
+  letter-spacing: 0.15em;
+  text-align: right;
 }
 
 .hud__score {
   font-family: var(--font-display);
   font-size: 1rem;
-  color: var(--clr-success);
+  color: var(--world-accent, var(--clr-success));
   letter-spacing: 0.08em;
+  text-align: right;
+}
+
+/* Level progress dots */
+.hud__levels {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hud__level-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: background var(--trans-mid), transform var(--trans-mid), box-shadow var(--trans-mid);
+}
+
+.hud__level-dot--done {
+  background: var(--world-accent, var(--clr-success));
+  box-shadow: 0 0 6px var(--world-accent, var(--clr-success));
+}
+
+.hud__level-dot--active {
+  background: white;
+  box-shadow: 0 0 8px white;
+  transform: scale(1.3);
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+.hud__level-dot--pending {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 6px white; }
+  50%       { box-shadow: 0 0 14px white; }
 }
 
 /* ── Bridge Component ── */
@@ -647,52 +716,72 @@ body {
   padding: var(--sp-lg) var(--sp-xl);
   border-radius: var(--rad-lg);
   text-align: center;
+  min-width: 280px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--trans-mid), transform var(--trans-mid);
-}
-
-.result-banner--visible {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  pointer-events: auto;
+  backdrop-filter: blur(12px);
 }
 
 .result-banner--success {
-  background: rgba(20, 60, 35, 0.90);
+  background: rgba(20, 60, 35, 0.92);
   border: 2px solid var(--clr-success);
   box-shadow: 0 0 40px rgba(72, 187, 120, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7);
 }
 
 .result-banner--failure {
-  background: rgba(60, 20, 20, 0.90);
+  background: rgba(60, 20, 20, 0.92);
   border: 2px solid var(--clr-error);
   box-shadow: 0 0 40px rgba(252, 129, 129, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7);
 }
 
+/* Story 4: Success crossing celebration icon */
+.result-banner__fx {
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: var(--sp-sm);
+  animation: fxBounce 0.6s ease;
+}
+
+@keyframes fxBounce {
+  0%  { transform: scale(0);   opacity: 0; }
+  60% { transform: scale(1.3); opacity: 1; }
+  100%{ transform: scale(1);   opacity: 1; }
+}
+
 .result-banner__title {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 900;
-  margin-bottom: var(--sp-sm);
+  margin-bottom: var(--sp-xs);
 }
 
 .result-banner--success .result-banner__title {
   color: var(--clr-success);
+  text-shadow: 0 0 16px rgba(72, 187, 120, 0.7);
 }
 
 .result-banner--failure .result-banner__title {
   color: var(--clr-error);
+  text-shadow: 0 0 16px rgba(252, 129, 129, 0.7);
 }
 
 .result-banner__word {
   font-family: var(--font-body);
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.80);
   letter-spacing: 0.15em;
   text-transform: uppercase;
+  margin-bottom: var(--sp-xs);
+}
+
+/* Story 4 & 5: flavour text describing the narrative outcome */
+.result-banner__flavour {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.50);
   margin-bottom: var(--sp-lg);
+  font-style: italic;
 }
 
 .result-banner__btn {
@@ -702,17 +791,25 @@ body {
   padding: var(--sp-sm) var(--sp-xl);
   border-radius: var(--rad-full);
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.1em;
-  transition: background var(--trans-fast), border-color var(--trans-fast), transform var(--trans-fast);
+  letter-spacing: 0.08em;
+  transition: background var(--trans-fast), border-color var(--trans-fast), transform var(--trans-fast), box-shadow var(--trans-fast);
 }
 
-.result-banner__btn:hover {
-  background: rgba(255, 255, 255, 0.20);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-1px);
+.result-banner__btn--success:hover {
+  background: rgba(72, 187, 120, 0.25);
+  border-color: var(--clr-success);
+  box-shadow: 0 0 12px rgba(72, 187, 120, 0.4);
+  transform: translateY(-2px);
+}
+
+.result-banner__btn--failure:hover {
+  background: rgba(252, 129, 129, 0.20);
+  border-color: var(--clr-error);
+  box-shadow: 0 0 12px rgba(252, 129, 129, 0.4);
+  transform: translateY(-2px);
 }
 
 /* ── Snap Particle Flash ── */
@@ -740,6 +837,110 @@ body {
   background: rgba(80, 220, 160, 0.50);
   animation: snapFlash 0.4s ease forwards;
   pointer-events: none;
+}
+
+/* ── Character Stage (Epic 2) ── */
+.character-stage {
+  position: absolute;
+  /* Positioned just above the bridge — overlayer */
+  bottom: 42%;  /* sits on top of the bridge area */
+  left: 6%;     /* starts on the left side of screen */
+  z-index: 15;
+  pointer-events: none;
+}
+
+.character-wrapper {
+  position: relative;
+  display: inline-block;
+  transform-origin: center bottom;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
+  will-change: transform;
+}
+
+.character-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Character idle bob */
+.character-wrapper {
+  animation: charIdleBob 2.5s ease-in-out infinite;
+}
+
+@keyframes charIdleBob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+
+/* Star particle from character on success */
+.char-star {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 20;
+  will-change: transform, opacity;
+}
+
+/* ── Level-Up / World Transition Panel (Epic 2) ── */
+.level-up-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 60;
+  padding: var(--sp-xl) calc(var(--sp-xl) * 1.5);
+  border-radius: var(--rad-lg);
+  text-align: center;
+  background: rgba(10, 5, 30, 0.94);
+  border: 2px solid var(--world-accent, var(--clr-info));
+  box-shadow:
+    0 0 60px rgba(0, 0, 0, 0.8),
+    0 0 30px var(--world-accent, var(--clr-info)),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  pointer-events: none;
+}
+
+.level-up-panel__emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: var(--sp-md);
+  animation: levelUpEmoji 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes levelUpEmoji {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+
+.level-up-panel__title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--world-accent, var(--clr-info));
+  margin-bottom: var(--sp-xs);
+  opacity: 0.8;
+}
+
+.level-up-panel__name {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 20px var(--world-accent, var(--clr-info));
+  margin-bottom: var(--sp-sm);
+}
+
+.level-up-panel__sub {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
 }
 
 /* ── Utility ── */
