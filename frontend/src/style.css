@@ -1,0 +1,757 @@
+/* ============================================================
+   THE WORD-BRIDGE BUILDER — Global Design System
+   ============================================================ */
+
+/* ── Google Fonts are loaded via index.html ── */
+
+/* ── Design Tokens ── */
+:root {
+  /* Palette */
+  --clr-bg-deep: #0a0c10;
+  --clr-bg-mid: #111520;
+  --clr-bg-sky: linear-gradient(180deg, #0d1b2a 0%, #1a2a1a 60%, #0a0c10 100%);
+
+  /* Forest / Environment */
+  --clr-forest-dark: #0d1f10;
+  --clr-forest-mid: #1b3a21;
+  --clr-mist: rgba(120, 200, 140, 0.08);
+
+  /* Bridge Materials */
+  --clr-skeleton-wood: #3d2b1f;
+  --clr-skeleton-rim: #6b4a32;
+  --clr-skeleton-glow: rgba(255, 180, 60, 0.25);
+
+  --clr-steel-base: #4a5568;
+  --clr-steel-mid: #718096;
+  --clr-steel-hi: #cbd5e0;
+  --clr-steel-glow: rgba(100, 180, 255, 0.40);
+
+  --clr-paper-base: #8b6914;
+  --clr-paper-dark: #5c4510;
+  --clr-paper-crinkle: #c89b3c;
+  --clr-paper-glow: rgba(200, 140, 20, 0.30);
+
+  /* Letter Slots */
+  --clr-slot-empty: rgba(255, 220, 120, 0.10);
+  --clr-slot-border: rgba(255, 200, 80, 0.45);
+  --clr-slot-filled: rgba(80, 220, 160, 0.20);
+  --clr-slot-filled-b: rgba(80, 220, 160, 0.70);
+
+  /* Letter Orbs */
+  --clr-orb-base: #1e3a5f;
+  --clr-orb-glow: rgba(100, 200, 255, 0.60);
+  --clr-orb-text: #e2f4ff;
+
+  /* Status */
+  --clr-success: #48bb78;
+  --clr-error: #fc8181;
+  --clr-warning: #f6ad55;
+  --clr-info: #63b3ed;
+
+  /* Typography */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Outfit', sans-serif;
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 40px;
+
+  /* Radii */
+  --rad-sm: 6px;
+  --rad-md: 12px;
+  --rad-lg: 20px;
+  --rad-full: 9999px;
+
+  /* Shadows */
+  --shadow-orb: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--clr-orb-glow);
+  --shadow-slot: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-steel: 0 0 30px var(--clr-steel-glow), 0 8px 32px rgba(0, 0, 0, 0.7);
+  --shadow-paper: 0 0 20px var(--clr-paper-glow), 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --trans-fast: 0.15s ease;
+  --trans-mid: 0.35s ease;
+  --trans-slow: 0.65s ease;
+}
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--clr-bg-deep);
+  color: rgba(255, 255, 255, 0.87);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* ── Game Scene Root ── */
+.game-scene {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: var(--clr-bg-sky);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Sky / Environment Layers ── */
+.env-stars {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 10%, rgba(255, 255, 200, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 5%, rgba(200, 220, 255, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.env-moon {
+  position: absolute;
+  top: 40px;
+  right: 80px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffbe8, #c8b860 60%, #8a7a30);
+  box-shadow: 0 0 40px rgba(255, 240, 140, 0.35), 0 0 80px rgba(255, 220, 80, 0.12);
+  pointer-events: none;
+}
+
+.env-forest-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background:
+    linear-gradient(to top, #061408 0%, #0d1f10 40%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Stylized tree silhouettes using CSS clip-path */
+.env-tree {
+  position: absolute;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.env-tree::before,
+.env-tree::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  background: #071209;
+}
+
+.env-tree--left {
+  left: 0;
+  width: 200px;
+  height: 300px;
+}
+
+.env-tree--right {
+  right: 0;
+  width: 200px;
+  height: 300px;
+}
+
+/* Mist / Fog */
+.env-mist {
+  position: absolute;
+  bottom: 30%;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(100, 180, 120, 0.06) 20%,
+      rgba(120, 200, 140, 0.10) 50%,
+      rgba(100, 180, 120, 0.06) 80%,
+      transparent 100%);
+  animation: mistDrift 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes mistDrift {
+  from {
+    transform: translateX(-20px);
+    opacity: 0.6;
+  }
+
+  to {
+    transform: translateX(20px);
+    opacity: 1;
+  }
+}
+
+/* ── HUD Header ── */
+.hud {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  padding: var(--sp-md) var(--sp-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hud__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 220, 120, 0.85);
+  text-shadow: 0 0 12px rgba(255, 200, 60, 0.5);
+}
+
+.hud__word-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.hud__score {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--clr-success);
+  letter-spacing: 0.08em;
+}
+
+/* ── Bridge Component ── */
+.bridge-wrapper {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-lg) 0;
+}
+
+.bridge-image-word {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 220, 100, 0.6);
+}
+
+/* Bridge Plank Container */
+.bridge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.8));
+  transition: filter var(--trans-slow);
+}
+
+/* -- Rope Lines (top / bottom rails) -- */
+.bridge__rope {
+  width: 520px;
+  height: 6px;
+  border-radius: var(--rad-full);
+  position: relative;
+}
+
+.bridge__rope--top {
+  background: linear-gradient(90deg, #4a3318 0%, #7a5c30 40%, #c8a060 60%, #7a5c30 80%, #4a3318 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px var(--clr-skeleton-glow);
+  margin-bottom: 4px;
+}
+
+.bridge__rope--bottom {
+  background: linear-gradient(90deg, #4a3318 0%, #7a5c30 40%, #c8a060 60%, #7a5c30 80%, #4a3318 100%);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.6), 0 0 8px var(--clr-skeleton-glow);
+  margin-top: 4px;
+}
+
+/* -- Planks Row -- */
+.bridge__planks {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) 0;
+  position: relative;
+}
+
+/* Single Plank / Letter Slot */
+.bridge__slot {
+  width: 64px;
+  height: 72px;
+  border-radius: var(--rad-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+  transition:
+    background var(--trans-mid),
+    border-color var(--trans-mid),
+    box-shadow var(--trans-mid),
+    transform var(--trans-mid);
+}
+
+/* Skeleton / Empty state */
+.bridge__slot--empty {
+  background: linear-gradient(160deg, #2a1a0e 0%, #1a0e06 100%);
+  border: 2px dashed var(--clr-slot-border);
+  box-shadow: var(--shadow-slot), 0 0 12px var(--clr-skeleton-glow);
+  animation: slotPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes slotPulse {
+
+  0%,
+  100% {
+    box-shadow: var(--shadow-slot), 0 0 8px var(--clr-skeleton-glow);
+  }
+
+  50% {
+    box-shadow: var(--shadow-slot), 0 0 22px rgba(255, 180, 60, 0.45);
+  }
+}
+
+/* Filled state */
+.bridge__slot--filled {
+  background: linear-gradient(160deg, #1a3a28 0%, #0f2218 100%);
+  border: 2px solid var(--clr-slot-filled-b);
+  box-shadow: var(--shadow-slot), 0 0 16px rgba(80, 220, 160, 0.35);
+  animation: none;
+}
+
+/* Slot letter text */
+.bridge__slot-letter {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.90);
+  text-shadow: 0 0 8px rgba(80, 220, 160, 0.8);
+  position: relative;
+  z-index: 1;
+  transition: color var(--trans-mid), text-shadow var(--trans-mid);
+}
+
+.bridge__slot--empty .bridge__slot-letter {
+  color: rgba(255, 220, 80, 0.25);
+  text-shadow: none;
+  font-size: 1.1rem;
+}
+
+/* Crack overlay on skeleton planks */
+.bridge__slot--empty::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  background:
+    repeating-linear-gradient(45deg,
+      transparent 0px,
+      transparent 14px,
+      rgba(255, 200, 80, 0.05) 14px,
+      rgba(255, 200, 80, 0.05) 15px);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Separator between planks */
+.bridge__separator {
+  width: 4px;
+  height: 52px;
+  background: linear-gradient(180deg, #4a3318 0%, #7a5c30 50%, #4a3318 100%);
+  border-radius: var(--rad-full);
+  opacity: 0.6;
+}
+
+/* ── Material States ── */
+
+/* STEEL */
+.bridge--steel .bridge__slot {
+  background: linear-gradient(160deg, var(--clr-steel-mid) 0%, var(--clr-steel-base) 100%);
+  border: 2px solid var(--clr-steel-hi);
+  box-shadow: var(--shadow-steel), inset 0 1px 3px rgba(255, 255, 255, 0.3);
+  animation: none;
+}
+
+.bridge--steel .bridge__slot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
+  border-radius: var(--rad-sm) var(--rad-sm) 0 0;
+  pointer-events: none;
+}
+
+.bridge--steel .bridge__rope--top,
+.bridge--steel .bridge__rope--bottom {
+  background: linear-gradient(90deg, #a0aec0 0%, #e2e8f0 50%, #a0aec0 100%);
+  box-shadow: 0 0 12px var(--clr-steel-glow);
+}
+
+.bridge--steel .bridge__slot-letter {
+  color: #f7fafc;
+  text-shadow: 0 0 10px rgba(100, 200, 255, 0.9), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* PAPER */
+.bridge--paper .bridge__slot {
+  background: linear-gradient(160deg, #c89b3c 0%, var(--clr-paper-dark) 100%);
+  border: 2px solid var(--clr-paper-crinkle);
+  box-shadow: var(--shadow-paper);
+  animation: none;
+}
+
+.bridge--paper .bridge__slot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(30deg, transparent 0px, transparent 8px,
+      rgba(0, 0, 0, 0.08) 8px, rgba(0, 0, 0, 0.08) 9px),
+    repeating-linear-gradient(-60deg, transparent 0px, transparent 12px,
+      rgba(255, 255, 255, 0.06) 12px, rgba(255, 255, 255, 0.06) 13px);
+  border-radius: var(--rad-sm);
+  pointer-events: none;
+}
+
+.bridge--paper .bridge__rope--top,
+.bridge--paper .bridge__rope--bottom {
+  background: linear-gradient(90deg, #5c4510 0%, #c89b3c 50%, #5c4510 100%);
+  box-shadow: 0 0 8px var(--clr-paper-glow);
+}
+
+.bridge--paper .bridge__slot-letter {
+  color: #3d2000;
+  text-shadow: none;
+}
+
+/* ── Collapse Animation ── */
+.bridge--collapsing {
+  animation: bridgeCollapse 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes bridgeCollapse {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  20% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateY(8px) rotate(3deg);
+    opacity: 0.9;
+  }
+
+  80% {
+    transform: translateY(40px) rotate(-5deg);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translateY(120px) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+/* Shake animation for wrong submit */
+.bridge--shake {
+  animation: bridgeShake 0.5s ease forwards;
+}
+
+@keyframes bridgeShake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  15% {
+    transform: translateX(-8px) rotate(-1deg);
+  }
+
+  30% {
+    transform: translateX(7px) rotate(1deg);
+  }
+
+  45% {
+    transform: translateX(-5px) rotate(-0.5deg);
+  }
+
+  60% {
+    transform: translateX(4px);
+  }
+
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+/* ── Letter Orbs ── */
+.orbs-area {
+  position: relative;
+  z-index: 8;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--sp-xl);
+}
+
+.physics-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* events handled by JS overlay */
+  opacity: 0;
+  /* hidden — physics world is invisible, snap is visual */
+}
+
+.orbs-tray {
+  display: flex;
+  gap: var(--sp-md);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: var(--sp-md) var(--sp-lg);
+  background: rgba(10, 15, 20, 0.55);
+  backdrop-filter: blur(10px);
+  border-radius: var(--rad-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Individual Letter Orb */
+.letter-orb {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  position: relative;
+  background: radial-gradient(circle at 35% 30%, #2a5fa8, var(--clr-orb-base) 70%);
+  border: 2px solid rgba(100, 180, 255, 0.45);
+  box-shadow: var(--shadow-orb);
+  transition: transform var(--trans-fast), box-shadow var(--trans-fast), opacity var(--trans-fast);
+  will-change: transform;
+  touch-action: none;
+  user-select: none;
+}
+
+.letter-orb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 28px var(--clr-orb-glow);
+  z-index: 100;
+}
+
+.letter-orb:hover:not(:active) {
+  transform: scale(1.08) translateY(-3px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 20px var(--clr-orb-glow);
+}
+
+.letter-orb--used {
+  opacity: 0.25;
+  pointer-events: none;
+  transform: scale(0.9);
+}
+
+/* Orb shimmer highlight */
+.letter-orb::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  width: 14px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.30);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+
+/* Orb text */
+.letter-orb__text {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--clr-orb-text);
+  text-shadow: 0 0 8px rgba(100, 200, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.6);
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* Orb "dragging" clone — created dynamically */
+.letter-orb-ghost {
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 999;
+  background: radial-gradient(circle at 35% 30%, #3d7de0, #1a3660 70%);
+  border: 2px solid rgba(120, 200, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(100, 200, 255, 0.7);
+  transition: transform 0.06s ease;
+}
+
+.letter-orb-ghost__text {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #e2f4ff;
+  text-shadow: 0 0 12px rgba(100, 220, 255, 1);
+}
+
+/* ── Result Banner ── */
+.result-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  z-index: 50;
+  padding: var(--sp-lg) var(--sp-xl);
+  border-radius: var(--rad-lg);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--trans-mid), transform var(--trans-mid);
+}
+
+.result-banner--visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.result-banner--success {
+  background: rgba(20, 60, 35, 0.90);
+  border: 2px solid var(--clr-success);
+  box-shadow: 0 0 40px rgba(72, 187, 120, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7);
+}
+
+.result-banner--failure {
+  background: rgba(60, 20, 20, 0.90);
+  border: 2px solid var(--clr-error);
+  box-shadow: 0 0 40px rgba(252, 129, 129, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7);
+}
+
+.result-banner__title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  margin-bottom: var(--sp-sm);
+}
+
+.result-banner--success .result-banner__title {
+  color: var(--clr-success);
+}
+
+.result-banner--failure .result-banner__title {
+  color: var(--clr-error);
+}
+
+.result-banner__word {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: var(--sp-lg);
+}
+
+.result-banner__btn {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  padding: var(--sp-sm) var(--sp-xl);
+  border-radius: var(--rad-full);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: background var(--trans-fast), border-color var(--trans-fast), transform var(--trans-fast);
+}
+
+.result-banner__btn:hover {
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ── Snap Particle Flash ── */
+@keyframes snapFlash {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+.snap-particle {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--rad-sm);
+  background: rgba(80, 220, 160, 0.50);
+  animation: snapFlash 0.4s ease forwards;
+  pointer-events: none;
+}
+
+/* ── Utility ── */
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
