@@ -14,11 +14,12 @@ This is the central tracking document for project progress.
 - [x] Architecture Design
 - [x] Epic & Story Breakdown
 
-### Phase 2: Implementation [IN_PROGRESS]
+### Phase 2: Implementation [COMPLETE]
 - [x] Core Engine Setup
-- [/] Physics Material Logic **(IN PROGRESS)**
-- [/] Spelling Interface **(IN PROGRESS)**
-- [ ] World Themes
+- [x] Physics Material Logic
+- [x] Spelling Interface
+- [x] World Themes
+- [x] Assistance & Retention Systems (Hint + Stars)
 
 ---
 
@@ -43,7 +44,7 @@ This is the central tracking document for project progress.
 
 ---
 
-## 👤 Epic 2: Character & World (Levels 1-5) [IN_PROGRESS]
+## 👤 Epic 2: Character & World (Levels 1-5) [COMPLETED]
 
 ### Story 4: Successful Crossing [COMPLETED]
 - [x] Created `CharacterComponent.tsx` — animated SVG character (GSAP)
@@ -68,10 +69,35 @@ This is the central tracking document for project progress.
 
 ---
 
+## 💡 Epic 3: Assistance & Retention [COMPLETED]
+
+### Story 6: Lightbulb Hint [COMPLETED]
+- [x] Created `HintModal.tsx` — full-screen overlay with GSAP entrance/exit animation
+- [x] Emoji-based word illustration + letter-by-letter reveal animation inside modal
+- [x] Descriptive text clue for all 25 words across 5 worlds
+- [x] 💡 Hint Button in HUD with numeric badge (3 uses per session), glow pulse idle animation
+- [x] Hint disables during non-playing phases; visual depletion state when 0 left
+- [x] On failure banner: nudge prompt shown if hint unused and player retried
+- [x] Hint usage tracked per-level and per-session
+
+### Story 7: Star Progression [COMPLETED]
+- [x] Created `StarSystem.ts` — star calculation (3★ perfect, 2★ hinted, 1★ retried)
+- [x] `recordLevelResult()` stores personal best per level → accumulates `totalStars`
+- [x] Persistent state via `localStorage` (survives page refresh)
+- [x] `StarDisplay.tsx` — animated 3-star row in result banner (GSAP stagger)
+- [x] `TotalStarCounter` in HUD (★ count, warm glow)
+- [x] `WorldStarProgress` — thin progress bar below HUD showing stars to next world unlock
+- [x] `WORLD_STAR_THRESHOLDS` — 5 thresholds (0/10/20/30/40) gating world progression
+- [x] Stars row in Level-Up transition panel with entrance animation
+- [x] "New personal best" / "Perfect!" labels on banner
+
+---
+
 ## 📝 Recent Updates
-- **2026-03-06:** **[EPIC 2 IN_PROGRESS]** Implemented Story 4 (Successful Crossing) & Story 5 (Bridge Collapse). CharacterComponent.tsx, WorldSystem.ts, 5-world level system, HUD level dots, World transition panel.
+- **2026-03-08:** **[EPIC 3 COMPLETE]** Implemented Story 6 (Lightbulb Hint) & Story 7 (Star Progression). HintModal.tsx, StarDisplay.tsx, StarSystem.ts. Full Assistance & Retention system operational.
+- **2026-03-06:** **[EPIC 2 COMPLETE]** Implemented Story 4 (Successful Crossing) & Story 5 (Bridge Collapse). CharacterComponent.tsx, WorldSystem.ts, 5-world level system, HUD level dots, World transition panel.
 - **2026-03-06:** **[EPIC 1 COMPLETE]** Implemented Core Bridge MVP — BridgeComponent.tsx, LetterOrb.tsx, Material Transformation GSAP logic. Full spell-to-build mechanic operational.
-- **2026-02-22:** Initiated Phase 5: Implementation. Created [bmad-implementation-guide.md](file:///c:/Users/AQ/Documents/Projects%20Python/The_word_bridge_builder/_bmad-output/implementation-artifacts/bmad-implementation-guide.md).
-- **2026-02-22:** Defined Epics & User Stories (`bmad-stories.md`) and set DoD.
-- **2026-02-22:** Documented Technical Architecture (`bmad-architecture.md`).
+- **2026-02-22:** Initiated Phase 5: Implementation. Created bmad-implementation-guide.md.
+- **2026-02-22:** Defined Epics & User Stories (bmad-stories.md) and set DoD.
+- **2026-02-22:** Documented Technical Architecture (bmad-architecture.md).
 - **2026-02-22:** Generated Comprehensive PRD.
